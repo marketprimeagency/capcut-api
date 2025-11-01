@@ -28,66 +28,110 @@ The CapCut API provides a programmatic interface to create video editing project
 
 This project uses Deno as the runtime. Ensure you have Deno installed on your system.
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd project
+### Using the Package (Recommended)
 
-# Run tests to verify installation
+Add to your `deno.json` imports:
+
+```json
+{
+  "imports": {
+    "capcut-api": "jsr:@your-namespace/capcut-api"
+  }
+}
+```
+
+Then import in your code:
+
+```typescript
+import {
+  Content,
+  MetaInfo,
+  Track,
+  Segment,
+  VideoMaterial,
+  AudioMaterial,
+  TextMaterial,
+  AnimationMaterial,
+  EffectMaterial,
+  SpeedMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
+```
+
+### Direct Import (Alternative)
+
+You can also import directly without modifying `deno.json`:
+
+```typescript
+import { Content, MetaInfo } from "jsr:@your-namespace/capcut-api";
+```
+
+### For Development
+
+To contribute or run locally:
+
+```bash
+git clone <repository-url>
+cd capcut-api
 deno test
 ```
 
-### Dependencies
-
-The project uses the following dependencies (managed via `deno.json`):
-
-- `@std/assert` - Assertion library for testing
-- `@std/collections` - Collection utilities
-- `@std/fs` - File system utilities
-- `@std/path` - Path manipulation
-- `fluent-ffmpeg` - FFmpeg wrapper for media processing
-- `ffmpeg-probe` - Media file metadata extraction
-- `imagescript` - Image processing
-
 ## Getting Started
 
-### Basic Project Creation
+### Quick Start Example
+
+Create your first CapCut project in a few simple steps:
 
 ```typescript
-import { Content } from "./src/model/project/Content.ts";
-import { MetaInfo } from "./src/model/project/MetaInfo.ts";
-import { Track } from "./src/model/tracks/Track.ts";
-import { Segment } from "./src/model/segments/Segments.ts";
-import { VideoMaterial } from "./src/model/materials/VideoMaterial.ts";
-import { DraftMaterialFactory } from "./src/model/draft_materials/DraftMaterialFactory.ts";
+import {
+  Content,
+  MetaInfo,
+  Track,
+  Segment,
+  VideoMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
+import { join } from "@std/path";
 
-// Create a new project
+// 1. Initialize project
 const content = new Content();
 const meta = new MetaInfo();
 
-// Load a video asset
+// 2. Import your media
 const videoAsset = await DraftMaterialFactory.create({
-  file_Path: "path/to/video.mp4"
+  file_Path: "path/to/your/video.mp4"
 });
-
-// Add to project metadata
 meta.setDraftMaterials([videoAsset]);
 
-// Create video material and segment
+// 3. Create video material
 const videoMaterial = new VideoMaterial();
 videoMaterial.setDraftMaterial(videoAsset);
 
+// 4. Create a segment (clip)
 const segment = new Segment();
 segment.setMaterial(videoMaterial);
 
-// Create a track and add the segment
+// 5. Add segment to a track
 const track = new Track({ type: "video" });
 track.addSegment(segment);
 content.track_instances.upsert(track);
 
-// Export project files
-const contentJSON = JSON.stringify(content);
-const metaJSON = JSON.stringify(meta);
+// 6. Register all materials
+content.mergeMaterials({ videos: [videoMaterial] });
+
+// 7. Export project files
+const projectFolder = "./my-capcut-project";
+await Deno.mkdir(projectFolder, { recursive: true });
+await Deno.writeTextFile(
+  join(projectFolder, "draft_content.json"),
+  JSON.stringify(content)
+);
+await Deno.writeTextFile(
+  join(projectFolder, "draft_meta_info.json"),
+  JSON.stringify(meta)
+);
+
+console.log("✅ Project created successfully!");
 ```
 
 ## Core Concepts
@@ -394,13 +438,15 @@ segment.mergeClip({
 ### Example 1: Simple Video with Audio
 
 ```typescript
-import { Content } from "./src/model/project/Content.ts";
-import { MetaInfo } from "./src/model/project/MetaInfo.ts";
-import { Track } from "./src/model/tracks/Track.ts";
-import { Segment } from "./src/model/segments/Segments.ts";
-import { VideoMaterial } from "./src/model/materials/VideoMaterial.ts";
-import { AudioMaterial } from "./src/model/materials/AudioMaterial.ts";
-import { DraftMaterialFactory } from "./src/model/draft_materials/DraftMaterialFactory.ts";
+import {
+  Content,
+  MetaInfo,
+  Track,
+  Segment,
+  VideoMaterial,
+  AudioMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
 
 const content = new Content();
 const meta = new MetaInfo();
@@ -441,11 +487,13 @@ content.mergeMaterials({
 ### Example 2: Text with Animation
 
 ```typescript
-import { Content } from "./src/model/project/Content.ts";
-import { Track } from "./src/model/tracks/Track.ts";
-import { Segment } from "./src/model/segments/Segments.ts";
-import { TextMaterial } from "./src/model/materials/TextMaterial.ts";
-import { AnimationMaterial } from "./src/model/materials/AnimationMaterial.ts";
+import {
+  Content,
+  Track,
+  Segment,
+  TextMaterial,
+  AnimationMaterial
+} from "capcut-api";
 
 const content = new Content();
 
@@ -490,12 +538,14 @@ content.mergeMaterials({
 ### Example 3: Multi-Segment Video with Speed Control
 
 ```typescript
-import { Content } from "./src/model/project/Content.ts";
-import { Track } from "./src/model/tracks/Track.ts";
-import { Segment } from "./src/model/segments/Segments.ts";
-import { VideoMaterial } from "./src/model/materials/VideoMaterial.ts";
-import { SpeedMaterial } from "./src/model/materials/SpeedMaterial.ts";
-import { DraftMaterialFactory } from "./src/model/draft_materials/DraftMaterialFactory.ts";
+import {
+  Content,
+  Track,
+  Segment,
+  VideoMaterial,
+  SpeedMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
 
 const content = new Content();
 
@@ -673,11 +723,210 @@ const convertToHex = (color: number[]) => {
 };
 ```
 
+## Real-World Use Cases
+
+### Use Case 1: Automated Product Video Generator
+
+Generate product showcase videos with text overlays:
+
+```typescript
+import {
+  Content,
+  MetaInfo,
+  Track,
+  Segment,
+  VideoMaterial,
+  TextMaterial,
+  AnimationMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
+
+const createProductVideo = async (productName: string, videoPath: string) => {
+  const content = new Content();
+  const meta = new MetaInfo();
+
+  // Add product video
+  const videoDraft = await DraftMaterialFactory.create({ file_Path: videoPath });
+  meta.setDraftMaterials([videoDraft]);
+
+  const videoMaterial = new VideoMaterial();
+  videoMaterial.setDraftMaterial(videoDraft);
+  const videoSegment = new Segment();
+  videoSegment.setMaterial(videoMaterial);
+
+  const videoTrack = new Track({ type: "video" });
+  videoTrack.addSegment(videoSegment);
+  content.track_instances.upsert(videoTrack);
+
+  // Add animated product name
+  const textMaterial = new TextMaterial();
+  textMaterial.setText(productName);
+  textMaterial.setFontSize(25);
+  textMaterial.setColor([1, 1, 1]);
+
+  const textSegment = new Segment();
+  const animation = new AnimationMaterial();
+  animation.setSegment(textSegment);
+
+  textSegment.setMaterial(textMaterial);
+  textSegment.setExtraMaterials({ material_animations: animation });
+  textSegment.setTargetTimerange({ start: 0, duration: 3000000 });
+  textSegment.mergeClip({ transform: { x: 0.0, y: -0.4 } });
+
+  animation.addFadeIn();
+  animation.addFadeOut();
+
+  const textTrack = new Track({ type: "text" });
+  textTrack.addSegment(textSegment);
+  content.track_instances.upsert(textTrack);
+
+  content.mergeMaterials({
+    videos: [videoMaterial],
+    texts: [textMaterial],
+    material_animations: [animation]
+  });
+
+  return { content, meta };
+};
+
+// Usage
+const { content, meta } = await createProductVideo("New Product 2024", "./product.mp4");
+```
+
+### Use Case 2: Batch Video Processing
+
+Process multiple videos with consistent styling:
+
+```typescript
+import {
+  Content,
+  MetaInfo,
+  Track,
+  Segment,
+  VideoMaterial,
+  AudioMaterial,
+  SpeedMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
+
+const batchProcessVideos = async (videoPaths: string[]) => {
+  for (const videoPath of videoPaths) {
+    const content = new Content();
+    const meta = new MetaInfo();
+
+    const videoDraft = await DraftMaterialFactory.create({ file_Path: videoPath });
+    meta.setDraftMaterials([videoDraft]);
+
+    const videoMaterial = new VideoMaterial();
+    videoMaterial.setDraftMaterial(videoDraft);
+
+    const speedMaterial = new SpeedMaterial();
+    const segment = new Segment();
+    segment.setMaterial(videoMaterial);
+    segment.setExtraMaterials({ speeds: speedMaterial });
+    segment.setSpeed(1.5); // Speed up by 1.5x
+
+    const track = new Track({ type: "video" });
+    track.addSegment(segment);
+    content.track_instances.upsert(track);
+
+    content.mergeMaterials({
+      videos: [videoMaterial],
+      speeds: [speedMaterial]
+    });
+
+    // Save project
+    const outputName = videoPath.split("/").pop()?.replace(".mp4", "");
+    await saveProject(content, meta, `./output/${outputName}`);
+  }
+};
+```
+
+### Use Case 3: Social Media Story Creator
+
+Create 15-second stories with text and music:
+
+```typescript
+import {
+  Content,
+  MetaInfo,
+  Track,
+  Segment,
+  VideoMaterial,
+  AudioMaterial,
+  TextMaterial,
+  DraftMaterialFactory
+} from "capcut-api";
+
+const createStory = async (videoPath: string, caption: string) => {
+  const content = new Content();
+  const meta = new MetaInfo();
+
+  // Load and trim video to 15 seconds
+  const videoDraft = await DraftMaterialFactory.create({ file_Path: videoPath });
+  meta.setDraftMaterials([videoDraft]);
+
+  const videoMaterial = new VideoMaterial();
+  videoMaterial.setDraftMaterial(videoDraft);
+
+  const videoSegment = new Segment();
+  videoSegment.setMaterial(videoMaterial);
+  videoSegment.setSourceTimerange({ start: 0, duration: 15000000 }); // 15 seconds
+  videoSegment.mergeClip({ scale: { x: 0.5625, y: 1.0 } }); // 9:16 crop
+
+  const videoTrack = new Track({ type: "video" });
+  videoTrack.addSegment(videoSegment);
+  content.track_instances.upsert(videoTrack);
+
+  // Add caption
+  const textMaterial = new TextMaterial();
+  textMaterial.setText(caption);
+  textMaterial.setFontSize(18);
+  textMaterial.setColor([1, 1, 1]);
+  textMaterial.setStroke({ color: [0, 0, 0], width: 0.1 });
+
+  const textSegment = new Segment();
+  textSegment.setMaterial(textMaterial);
+  textSegment.setTargetTimerange({ start: 0, duration: 15000000 });
+  textSegment.mergeClip({ transform: { x: 0.0, y: 0.45 } }); // Bottom
+
+  const textTrack = new Track({ type: "text" });
+  textTrack.addSegment(textSegment);
+  content.track_instances.upsert(textTrack);
+
+  // Add background music
+  const audioMaterial = AudioMaterial.get("lofiWarmth");
+  const audioSegment = new Segment();
+  audioSegment.setMaterial(audioMaterial);
+  audioSegment.setTargetTimerange({ start: 0, duration: 15000000 });
+  audioSegment.setVolume(0.3); // Lower volume
+
+  const audioTrack = new Track({ type: "audio" });
+  audioTrack.addSegment(audioSegment);
+  content.track_instances.upsert(audioTrack);
+
+  content.mergeMaterials({
+    videos: [videoMaterial],
+    texts: [textMaterial],
+    audios: [audioMaterial]
+  });
+
+  return { content, meta };
+};
+```
+
 ## Common Patterns
 
 ### Adding a Video Clip
 
 ```typescript
+import {
+  VideoMaterial,
+  Segment,
+  Track,
+  DraftMaterialFactory
+} from "capcut-api";
+
 const draft = await DraftMaterialFactory.create({ file_Path: "video.mp4" });
 meta.setDraftMaterials([draft]);
 
@@ -708,9 +957,35 @@ segment.mergeClip({ transform: { x: 0.4, y: 0.4 } });
 ### Applying Effects
 
 ```typescript
+import { EffectMaterial } from "capcut-api";
+
 const effect = EffectMaterial.get("FOUNDATION");
 segment.setExtraMaterials({ effects: effect });
 content.applyEffect(effect, segment);
+```
+
+### Helper Function: Save Project
+
+```typescript
+import { join } from "@std/path";
+import type { Content, MetaInfo } from "capcut-api";
+
+const saveProject = async (
+  content: Content,
+  meta: MetaInfo,
+  outputPath: string
+) => {
+  await Deno.mkdir(outputPath, { recursive: true });
+  await Deno.writeTextFile(
+    join(outputPath, "draft_content.json"),
+    JSON.stringify(content)
+  );
+  await Deno.writeTextFile(
+    join(outputPath, "draft_meta_info.json"),
+    JSON.stringify(meta)
+  );
+  console.log(`✅ Project saved to ${outputPath}`);
+};
 ```
 
 ## Limitations
